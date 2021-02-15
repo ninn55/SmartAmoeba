@@ -139,7 +139,7 @@ int calc_nn(def_type *input_tensor,
 #if 0 // add for debuging
 
     for (int niui = 0; niui < 10; niui ++){
-        printf("%f \n \r", abs(FullConnect_output[0][niui] - out[niui]));
+        printf("|%f \t- %f \t| = %f \n \r", FullConnect_output[0][niui], out[niui], abs(FullConnect_output[0][niui] - out[niui]));
     }
 
 #endif
