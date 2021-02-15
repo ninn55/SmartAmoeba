@@ -1,0 +1,20 @@
+{
+    "files.associations": {
+        "debug.h": "c",
+        "stdint.h": "c",
+        "stdio.h": "c",
+        "tensors.h": "c",
+        "common.h": "c",
+        "graph.h": "c",
+        "ops.h": "c"
+    },
+    "python.pythonPath": "D:\\work\\uAISS\\conda\\python.exe",
+    "python.autoComplete.extraPaths": [
+        "${workspaceFolder}/backend",
+        "${workspaceFolder}/train"
+    ],
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/backend",
+        "${workspaceFolder}/train"
+    ]
+}
