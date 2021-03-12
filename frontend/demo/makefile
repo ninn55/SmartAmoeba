@@ -1,6 +1,7 @@
 CC = gcc
 INCLUDES = -I$(SRC_DIRS)
-CFLAGS = -O2 -Wall -g $(INCLUDES)
+CFLAGS = -std=c99 -O2 -g $(INCLUDES)
+# CFLAGS = -std=c99 -O2 -Wall -g $(INCLUDES)
 
 MAINSRC = main.c
 TARGET_EXEC = main

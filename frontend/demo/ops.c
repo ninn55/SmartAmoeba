@@ -1,4 +1,5 @@
 #include "ops.h"
+//operation written for readability
 
 int conv_2d(
         const void *input_tensor,
@@ -162,17 +163,6 @@ int soft_max(const void *input_tensor,
 {
     def_type *in_ts = (def_type*)input_tensor;
     def_type *out_ts = (def_type*)output_tensor;
-#if 0
-    def_type sum = (def_type)0;
-
-    for(int i = 0; i < inputSize; i++){
-        out_ts[i] = expf((double)in_ts[i]);
-        sum += out_ts[i];
-    }
-    for(int i = 0; i < inputSize; i++){
-        out_ts[i] /= sum;
-    }
-#else
 
     def_type m = -INFINITY;
     for (int i = 0; i < inputSize; i++) {
@@ -191,8 +181,6 @@ int soft_max(const void *input_tensor,
       out_ts [i] = expf(in_ts[i] - offset);
     }
 
-#endif
-
     return 0;
 }
 
@@ -205,27 +193,58 @@ int relu(def_type *inout_tensor,
 {
     def_type *io_ts = (def_type*)inout_tensor;
 
-#if 0
-    for (int ch = 0; ch < CH; ch++)
-    {
-        for (int i = 0; i < H; i++)
-        {
-            for(int j = 0; j < W; j++)
-            {
-                def_type val = *(io_ts + ch * H * W + i * W + j);
-                if (val < (def_type)0)
-                    *(io_ts + ch * H * W + i * W + j) = (def_type)0;
-            }
-        }
-    }
-#else
     for (int i = 0; i < H*W*CH; i++)
     {
         def_type val = *(io_ts + i);
         if (val < (def_type)0)
             *(io_ts + i) = (def_type)0;
     }
-#endif
 
     return 0;
+}
+
+int flatten(const void *input_tensor,
+           void *output_tensor,
+           unsigned H,
+           unsigned W,
+           unsigned CH)
+{
+    int index = 0;
+
+    def_type *in_ts = (def_type*)input_tensor;
+    def_type *out_ts = (def_type*)output_tensor;
+
+    for (int h = 0; h < H; h++)
+    {
+        for (int w = 0; w < W; w++)
+        {
+            for (int ch = 0; ch < CH; ch++)
+            {
+                *(out_ts + index) = *(in_ts + ch * H * W + h * W + w);
+                index++;
+            }
+        }
+    }
+}
+
+int argmax(const void *input_tensor,
+           unsigned *output_index,
+           unsigned W)
+{
+    def_type *in_ts = (def_type*)input_tensor;
+
+    int pos;
+    def_type val;
+
+    val = in_ts[0];
+    pos = 0;
+    for (int i = 1; i < W; i++)
+    {
+        if (val < in_ts[i])
+        {
+            val = in_ts[i];
+            pos = i;
+        }
+    }
+    *output_index = pos;
 }

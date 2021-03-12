@@ -41,4 +41,14 @@ int relu(def_type *,
          unsigned ,
          unsigned );
 
+int flatten(const void *,
+           void *,
+           unsigned ,
+           unsigned ,
+           unsigned);
+
+int argmax(const void *,
+           unsigned *,
+           unsigned );
+
 #endif // _OPS_H

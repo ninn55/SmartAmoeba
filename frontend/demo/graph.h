@@ -3,8 +3,6 @@
 
 #include "common.h"
 
-int calc_nn(def_type *,
-            unsigned,
-            unsigned);
+int calc_nn(def_type *, def_type *);
 
 #endif // _GRAPH_H

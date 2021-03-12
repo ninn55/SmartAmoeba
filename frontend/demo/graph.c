@@ -12,156 +12,284 @@ static unsigned buffer_pos = 0;
         buffer_pos = (buffer_pos + 1) % buffer_num;\
     } while(0)
 
-int calc_nn(def_type *input_tensor,
-            unsigned H,
-            unsigned W)
-{
+//Only support 2d tensor input
+int calc_nn(def_type *input_tensor, def_type *output_tensor)
+{   
+    // global initialization
+    def_type *out;
+    unsigned W, H, ICH;
+
+    // Initiation for convelution 2D layer
+    unsigned OCH, KS;
+
+    //Initialization for maxpool2d
+    unsigned PS;
+
+    //Initialization for matmul
+    unsigned FW, FH;
+
+    //-----------------------------------------
+
+    // CONV_2D_0
+    // is input layer
     def_type *in_ts = (def_type *)input_tensor;
-    unsigned OW, OH, ICH, OCH, KS;
-    KS = 3;
-    OW = W - KS + 1;
-    OH = H - KS + 1;
-    ICH = 1;
-    OCH = 2;
-    def_type *out; // = buffer;
     GET_BUFFER_ADDR(out);
+
+    H = 28; // <<inputWidth>>
+    W = 28; // <<inputHeight>>
+    ICH = 1; // <<inputChannel>>
+
+    KS = 3; // <<kernelSize>>
+    OCH = 2; // <<outputChannel>>
+
     conv_2d(in_ts, out, Conv2D1, Conv2D1_bias, W, H, ICH, OCH, KS);
 
-    //限制幅度
-    W = OW;
-    H = OH;
+    // CONV_2D_0 ReLu
+    W = 26; // <<inputHeight>>
+    H = 26; // <<inputWidth>>
+    OCH = 2;// <<outputChannel>>
     relu(out, W, H, OCH);
 
-    //2维的卷积
-    in_ts = out;
-    KS = 3;
-    OW = W - KS + 1;
-    OH = H - KS + 1;
-    ICH = 2;
-    OCH = 4;
-    GET_BUFFER_ADDR(out);
-    conv_2d(in_ts, out, Conv2D2, Conv2D2_bias, W, H, ICH, OCH, KS);
-
-    //限制幅度
-    W = OW;
-    H = OH;
-    ICH = 4;
-    OCH = 4;
-    relu(out, W, H, ICH);
-
-    //池化
-    in_ts = out;
-    OW = W / 2;
-    OH = H / 2;
-    ICH = 4;
-    OCH = 4;
-    GET_BUFFER_ADDR(out);
-    maxpool_2d(in_ts, out, W, H, ICH, 2);
-
-    //2维卷积
-    W = OW;
-    H = OH;
-    in_ts = out;
-    KS = 3;
-    OW = W - KS + 1;
-    OH = H - KS + 1;
-    ICH = 4;
-    OCH = 8;
-    GET_BUFFER_ADDR(out);
-    conv_2d(in_ts, out, Conv2D3, Conv2D3_bias, W, H, ICH, OCH, KS);
-
-    //限制幅度
-    W = OW;
-    H = OH;
-    ICH = 8;
-    OCH = 8;
-    relu(out, W, H, ICH);
-
-    //2维卷积
-    W = OW;
-    H = OH;
-    in_ts = out;
-    KS = 3;
-    OW = W - KS + 1;
-    OH = H - KS + 1;
-    ICH = 8;
-    OCH = 16;
-    GET_BUFFER_ADDR(out);
-    conv_2d(in_ts, out, Conv2D4, Conv2D4_bias, W, H, ICH, OCH, KS);
-
-    //限制幅度
-    W = OW;
-    H = OH;
-    ICH = 16;
-    OCH = 16;
-    relu(out, W, H, ICH);
-
-    //池化
-    in_ts = out;
-    OW = W / 2;
-    OH = H / 2;
-    ICH = 16;
-    OCH = 16;
-    GET_BUFFER_ADDR(out);
-
-    maxpool_2d(in_ts, out, W, H, ICH, 2);
-
-    //扁平输出
-    in_ts = out;
-    GET_BUFFER_ADDR(out);
-    int index = 0;
-
-    for (int h = 0; h < OH; h++)
-    {
-        for (int w = 0; w < OW; w++)
-        {
-            for (int ch = 0; ch < OCH; ch++)
-            {
-                *(out + index) = *(in_ts + ch * OH * OW + h * OW + w);
-                index++;
+// Conv2D1_output
+#if 1 // added for debuging
+    for (int i = 0; i < 2; i ++){
+        for (int j = 0; j < 26; j ++){
+            for (int k = 0; k < 26; k ++){
+                if (fabs(Conv2D1_output[0][i][j][k] - *(out + i * 26 * 26 + j * 26 + k)) > 0.01){
+                    printf("Conv2D1_output Index (%d, %d, %d): |%f \t- %f \t| = %f \n \r", 
+                        i, j, k,
+                        Conv2D1_output[0][i][j][k], 
+                        *(out + i * 26 * 26 + j * 26+k), 
+                        fabs(Conv2D1_output[0][i][j][k] - *(out + i * 26 * 26 + j * 26+k))
+                    );
+                };
             }
         }
     }
-
-    OW = OW * OH * OCH;
-    OH = 1;
-
-    //矩阵相乘
-    in_ts = out;
-    W = OW;
-    H = OH;
-    OH = H;
-    OW = 10;
-    GET_BUFFER_ADDR(out);
-    OCH = 1;
-    matmul(in_ts, out, FullConnect, FullConnect_bias, W, H, 10, 256);
-    
-#if 0 // add for debuging
-
-    for (int niui = 0; niui < 10; niui ++){
-        printf("|%f \t- %f \t| = %f \n \r", FullConnect_output[0][niui], out[niui], abs(FullConnect_output[0][niui] - out[niui]));
-    }
-
 #endif
-    H = OH;
-    W = OW;
+
+    //CONV_2D_1
     in_ts = out;
     GET_BUFFER_ADDR(out);
-    OCH = 1;
 
-    soft_max(in_ts, out, OW * OH);
-    int pos;
-    float val;
-    val = out[0];
-    pos = 0;
-    for (int i = 1; i < 10; i++)
-    {
-        if (val < out[i])
-        {
-            val = out[i];
-            pos = i;
+    W = 26; // <<inputWidth>>
+    H = 26; // <<inputHeight>>
+    ICH = 2; // <<inputChannel>>
+
+    KS = 3;// <<kernelSize>>
+    OCH = 4; // <<outputChannel>>
+
+    conv_2d(in_ts, out, Conv2D2, Conv2D2_bias, W, H, ICH, OCH, KS);
+
+    //CONV_2D_1 ReLu
+    W = 26; // <<inputWidth>>
+    H = 26; // <<inputHeight>>
+    ICH = 4; // <<inputChannel>>
+    relu(out, W, H, ICH);
+
+//Conv2D2_output
+#if 1 // added for debuging
+    for (int i = 0; i < 4; i ++){
+        for (int j = 0; j < 24; j ++){
+            for (int k = 0; k < 24; k ++){
+                if (fabs(Conv2D2_output[0][i][j][k] - *(out + i * 24 * 24 + j * 24 + k)) > 0.01){
+                    printf("Conv2D2_output Index (%d, %d, %d): |%f \t- %f \t| = %lf \n \r", 
+                        i, j, k,
+                        Conv2D2_output[0][i][j][k], 
+                        *(out + i * 24 * 24 + j * 24 + k), 
+                        fabs(Conv2D2_output[0][i][j][k] - *(out + i * 24 * 24 + j * 24 + k))
+                    );
+                };
+            }
         }
     }
+#endif
 
-    return pos;
+    //MAX_POOL_2D_2
+    in_ts = out;
+    GET_BUFFER_ADDR(out);
+
+    W = 24;
+    H = 24;
+    ICH = 4; // <<inputChannel>>
+    PS = 2; // <<PoolSize>>
+    maxpool_2d(in_ts, out, W, H, ICH, PS);
+
+//MAX_POOL_2D_2
+#if 1 // added for debuging
+    for (int i = 0; i < 4; i ++){
+        for (int j = 0; j < 12; j ++){
+            for (int k = 0; k < 12; k ++){
+                if (fabs(Maxpool1_output[0][i][j][k] - *(out + i * 12 * 12 + j * 12 + k)) > 0.01){
+                    printf("MAX_POOL_2D_2 Index (%d, %d, %d): \t |%f \t- %f \t| = %lf \n \r", 
+                        i, j, k,
+                        Maxpool1_output[0][i][j][k], 
+                        *(out + i * 12 * 12 + j * 12 + k), 
+                        fabs(Maxpool1_output[0][i][j][k] - *(out + i * 12 * 12 + j * 12 + k))
+                    );
+                };
+            }
+        }
+    }
+#endif
+    //CONV_2D_3
+    in_ts = out;
+    GET_BUFFER_ADDR(out);
+
+    W = 12; // <<inputWidth>>
+    H = 12; // <<inputHeight>>
+    ICH = 4; // <<inputChannel>>
+    
+    KS = 3; // <<kernelSize>>
+    OCH = 8; // <<outputChannel>>
+    conv_2d(in_ts, out, Conv2D3, Conv2D3_bias, W, H, ICH, OCH, KS);
+
+    //CONV_2D_3 ReLu
+    W = 12; // <<inputWidth>>
+    H = 12; // <<inputHeight>>
+    ICH = 8; // <<inputChannel>>
+    OCH = 8; // <<outputChannel>>
+    relu(out, W, H, ICH);
+
+//CONV_2D_3
+#if 1 // added for debuging
+    for (int i = 0; i < 8; i ++){
+        for (int j = 0; j < 10; j ++){
+            for (int k = 0; k < 10; k ++){
+                if (fabs(Conv2D3_output[0][i][j][k] - *(out + i * 10 * 10 + j * 10 + k)) > 0.01){
+                    printf("CONV_2D_3 Index (%d, %d, %d): |%f \t- %f \t| = %lf  \n \r", 
+                        i, j, k,
+                        Conv2D3_output[0][i][j][k], 
+                        *(out + i * 10 * 10 + j * 10 + k), 
+                        fabs(Conv2D3_output[0][i][j][k] - *(out + i * 10 * 10 + j * 10 + k))
+                    );
+                };
+            }
+        }
+    }
+#endif
+
+    //CONV_2D_4
+    in_ts = out;
+    GET_BUFFER_ADDR(out);
+
+    W = 10;// <<inputWidth>>
+    H = 10;// <<inputHeight>>
+    ICH = 8;// <<inputChannel>>
+    
+    KS = 3;// <<kernelSize>>
+    OCH = 16;// <<outputChannel>>
+    conv_2d(in_ts, out, Conv2D4, Conv2D4_bias, W, H, ICH, OCH, KS);
+
+    //CONV_2D_4 ReLu
+    W = 8;// <<inputWidth>>
+    H = 8;// <<inputHeight>>
+    ICH = 16;// <<inputChannel>>
+    OCH = 16;// <<outputChannel>>
+    relu(out, W, H, ICH);
+
+//CONV_2D_4
+#if 1 // added for debuging
+    for (int i = 0; i < 16; i ++){
+        for (int j = 0; j < 8; j ++){
+            for (int k = 0; k < 8; k ++){
+                if (fabs(Conv2D4_output[0][i][j][k] - *(out + i * 8 * 8 + j * 8 + k)) > 0.1){
+                    printf("CONV_2D_4 Index (%d, %d, %d): |%f \t- %f \t| = %lf  \n \r", 
+                        i, j, k,
+                        Conv2D4_output[0][i][j][k], 
+                        *(out + i * 8 * 8 + j * 8 + k), 
+                        fabs(Conv2D4_output[0][i][j][k] - *(out + i * 8 * 8 + j * 8 + k))
+                    );
+                };
+            }
+        }
+    }
+#endif
+
+    //MAX_POOL_2D_5
+    in_ts = out;
+    GET_BUFFER_ADDR(out);
+
+    ICH = 16;// <<inputChannel>>
+    OCH = 16;// <<outputChannel>>
+
+    maxpool_2d(in_ts, out, W, H, ICH, 2);
+
+//MAX_POOL_2D_5
+#if 1 // added for debuging
+    for (int i = 0; i < 16; i ++){
+        for (int j = 0; j < 4; j ++){
+            for (int k = 0; k < 4; k ++){
+                if (fabs(Maxpool2_output[0][i][j][k] - *(out + i * 4 * 4 + j * 4 + k)) > 0.1){
+                    printf("MAX_POOL_2D_5 Index (%d, %d, %d): \t |%f \t- %f \t| = %lf \n \r", 
+                        i, j, k,
+                        Maxpool2_output[0][i][j][k], 
+                        *(out + i * 4 * 4 + j * 4 + k), 
+                        fabs(Maxpool2_output[0][i][j][k] - *(out + i * 4 * 4 + j * 4 + k))
+                    );
+                };
+            }
+        }
+    }
+#endif
+
+    //RESHAPE_6
+    in_ts = out;
+    GET_BUFFER_ADDR(out);
+
+    H = 4;// <<inputHeight>>
+    W = 4;// <<inputWidth>>
+    ICH = 16;// <<inputChannel>>
+    flatten(in_ts, out, H, W, ICH);
+
+// Flatten
+#if 1 // add for debuging
+    for (int i = 0; i < 256; i ++){
+        if (fabs(Flatten_output[0][i] - out[i]) > 0.1){
+            printf("Flatten index %d : |%f \t- %f \t| = %f \n \r", 
+                    i, Flatten_output[0][i], out[i], 
+                    fabs(Flatten_output[0][i] - out[i]));
+        }
+    }
+#endif
+
+    //FULLY_CONNECTED_7
+    in_ts = out;
+    GET_BUFFER_ADDR(out);
+
+    W = 256;// <<inputWidth>>
+    H = 1;// <<inputHeight>>
+    FW = 10;// <<MatmulFilterWidth>>
+    FH = 256;// <<MatmulFilterHeight>>
+    matmul(in_ts, out, FullConnect, FullConnect_bias, W, H, FW, FH);
+    
+#if 1 // add for debuging
+    for (int i = 0; i < 10; i ++){
+        if (fabs(FullConnect_output[0][i] - out[i]) > 0.5){
+            printf("|%f \t- %f \t| = %f \n \r", FullConnect_output[0][i], out[i], fabs(FullConnect_output[0][i] - out[i]));
+        }
+    }
+#endif
+
+    // SOFTMAX_8
+    in_ts = out;
+    GET_BUFFER_ADDR(out);
+    
+    H = 1;// <<inputHeight>>
+    W = 10;// <<inputWidth>>
+
+    soft_max(in_ts, out, W * H);
+
+#if 1 // add for debuging
+    for (int i = 0; i < 10; i ++){
+        if (fabs(SoftMax_output[0][i] - out[i]) > 0.01){
+            printf("|%f \t- %f \t| = %f \n \r", SoftMax_output[0][i], out[i], fabs(SoftMax_output[0][i] - out[i]));
+        }
+    }
+#endif
+
+    //*output_tensor = *out;
+    memcpy(output_tensor, out, sizeof(*out) * 10); // <<OutputTensor size>>
+
+    return 0;
 }
