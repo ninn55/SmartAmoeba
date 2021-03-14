@@ -4,8 +4,9 @@
 
 const unsigned buffer_size = 2304;
 const unsigned buffer_num = 2;
-static def_type buffer[2304 * 2];
+static def_type buffer[buffer_size * buffer_num];
 static unsigned buffer_pos = 0;
+// NO local variable is referenced
 #define GET_BUFFER_ADDR(addr) \
     do {\
         addr = &buffer[buffer_pos * buffer_size];\
