@@ -25,7 +25,7 @@ int fused_conv_2d_relu(
         unsigned ,
         unsigned ,
         unsigned);
-        
+
 int maxpool_2d(const void *,
                void *,
                unsigned ,
@@ -34,6 +34,15 @@ int maxpool_2d(const void *,
                unsigned );
 
 int matmul(const void *,
+           void *,
+           const void *,
+           const void *,
+           unsigned ,
+           unsigned ,
+           unsigned ,
+           unsigned );
+
+int fused_matmul_relu(const void *,
            void *,
            const void *,
            const void *,

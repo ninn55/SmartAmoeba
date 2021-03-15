@@ -214,7 +214,52 @@ int matmul(const void *input_tensor,
     return 0;
 }
 
+int fused_matmul_relu(const void *input_tensor,
+           void *output_tensor,
+           const void *full_connect,
+           const void *full_connect_bias,
+           unsigned IN_W,
+           unsigned IN_H,
+           unsigned FC_W,
+           unsigned FC_H)
+{
+    // NOT TESTED
+    def_type *in_ts = (def_type*)input_tensor;
+    def_type *out_ts = (def_type*)output_tensor;
+    def_type *mul_ts = (def_type*)full_connect;
+    def_type *b_ts = (def_type*)full_connect_bias;
 
+    unsigned i, j, k;
+    unsigned OUT_H = IN_H;
+    unsigned OUT_W = FC_W;
+
+    def_type res = 0;
+
+    if (IN_W != FC_H)
+    {
+        printf("error.\n");
+        return 1;
+    }
+
+    for (i = 0; i < IN_H; i++)
+    {
+        for (j = 0; j < FC_W; j++)
+        {
+            def_type pd = 0;
+            for (k = 0; k < IN_W; k++)
+            {
+
+                pd += *(in_ts + i * IN_W + k) * *(mul_ts + k * FC_W + j);
+            }
+            res = pd + *(b_ts + i);
+            if (res < (def_type)0)
+                res = (def_type)0;
+            *(out_ts + i * FC_W + j) = res;
+        }
+    }
+
+    return 0;
+}
 
 int soft_max(const void *input_tensor,
              void *output_tensor,
