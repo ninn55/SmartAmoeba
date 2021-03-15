@@ -6,15 +6,23 @@
         "tensors.h": "c",
         "common.h": "c",
         "graph.h": "c",
-        "ops.h": "c"
+        "ops.h": "c",
+        "random": "c",
+        "array": "c",
+        "*.cuh": "c"
     },
-    "python.pythonPath": "D:\\work\\uAISS\\conda\\python.exe",
+    "python.pythonPath": "C:\\ProgramData\\Anaconda3\\python.exe",
     "python.autoComplete.extraPaths": [
         "${workspaceFolder}/backend",
-        "${workspaceFolder}/train"
+        "${workspaceFolder}/train",
+        "./backend",
+        "./train"
     ],
     "python.analysis.extraPaths": [
         "${workspaceFolder}/backend",
-        "${workspaceFolder}/train"
-    ]
+        "${workspaceFolder}/train",
+        "./backend",
+        "./train"
+    ],
+    "python.analysis.autoSearchPaths": false
 }
