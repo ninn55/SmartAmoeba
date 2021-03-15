@@ -15,7 +15,17 @@ int conv_2d(
         unsigned ,
         unsigned);
 
-
+int fused_conv_2d_relu(
+        const void *,
+        void *,
+        const void *,
+        const void *,
+        unsigned ,
+        unsigned ,
+        unsigned ,
+        unsigned ,
+        unsigned);
+        
 int maxpool_2d(const void *,
                void *,
                unsigned ,

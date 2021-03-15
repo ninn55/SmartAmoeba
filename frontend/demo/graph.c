@@ -1,10 +1,11 @@
 #include "graph.h"
 #include "tensors.h"
 #include "ops.h"
+#include "string.h"
 
-const unsigned buffer_size = 2304;
-const unsigned buffer_num = 2;
-static def_type buffer[buffer_size * buffer_num];
+static const unsigned buffer_size = 2304;
+static const unsigned buffer_num = 2;
+static def_type buffer[2304 * 2];
 static unsigned buffer_pos = 0;
 // NO local variable is referenced
 #define GET_BUFFER_ADDR(addr) \
@@ -19,6 +20,7 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
     // global initialization
     def_type *out;
     unsigned W, H, ICH;
+    def_type *in_ts = (def_type *)input_tensor;
 
     // Initiation for convelution 2D layer
     unsigned OCH, KS;
@@ -32,8 +34,6 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
     //-----------------------------------------
 
     // CONV_2D_0
-    // is input layer
-    def_type *in_ts = (def_type *)input_tensor;
     GET_BUFFER_ADDR(out);
 
     H = 28; // <<inputWidth>>
@@ -43,13 +43,7 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
     KS = 3; // <<kernelSize>>
     OCH = 2; // <<outputChannel>>
 
-    conv_2d(in_ts, out, Conv2D1, Conv2D1_bias, W, H, ICH, OCH, KS);
-
-    // CONV_2D_0 ReLu
-    W = 26; // <<inputHeight>>
-    H = 26; // <<inputWidth>>
-    OCH = 2;// <<outputChannel>>
-    relu(out, W, H, OCH);
+    fused_conv_2d_relu(in_ts, out, Conv2D1, Conv2D1_bias, W, H, ICH, OCH, KS);
 
 // Conv2D1_output
 #if 1 // added for debuging
@@ -80,13 +74,7 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
     KS = 3;// <<kernelSize>>
     OCH = 4; // <<outputChannel>>
 
-    conv_2d(in_ts, out, Conv2D2, Conv2D2_bias, W, H, ICH, OCH, KS);
-
-    //CONV_2D_1 ReLu
-    W = 26; // <<inputWidth>>
-    H = 26; // <<inputHeight>>
-    ICH = 4; // <<inputChannel>>
-    relu(out, W, H, ICH);
+    fused_conv_2d_relu(in_ts, out, Conv2D2, Conv2D2_bias, W, H, ICH, OCH, KS);
 
 //Conv2D2_output
 #if 1 // added for debuging
@@ -143,14 +131,7 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
     
     KS = 3; // <<kernelSize>>
     OCH = 8; // <<outputChannel>>
-    conv_2d(in_ts, out, Conv2D3, Conv2D3_bias, W, H, ICH, OCH, KS);
-
-    //CONV_2D_3 ReLu
-    W = 12; // <<inputWidth>>
-    H = 12; // <<inputHeight>>
-    ICH = 8; // <<inputChannel>>
-    OCH = 8; // <<outputChannel>>
-    relu(out, W, H, ICH);
+    fused_conv_2d_relu(in_ts, out, Conv2D3, Conv2D3_bias, W, H, ICH, OCH, KS);
 
 //CONV_2D_3
 #if 1 // added for debuging
@@ -180,14 +161,7 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
     
     KS = 3;// <<kernelSize>>
     OCH = 16;// <<outputChannel>>
-    conv_2d(in_ts, out, Conv2D4, Conv2D4_bias, W, H, ICH, OCH, KS);
-
-    //CONV_2D_4 ReLu
-    W = 8;// <<inputWidth>>
-    H = 8;// <<inputHeight>>
-    ICH = 16;// <<inputChannel>>
-    OCH = 16;// <<outputChannel>>
-    relu(out, W, H, ICH);
+    fused_conv_2d_relu(in_ts, out, Conv2D4, Conv2D4_bias, W, H, ICH, OCH, KS);
 
 //CONV_2D_4
 #if 1 // added for debuging
@@ -211,6 +185,8 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
     in_ts = out;
     GET_BUFFER_ADDR(out);
 
+    W = 8;// <<inputWidth>>
+    H = 8;// <<inputHeight>>
     ICH = 16;// <<inputChannel>>
     OCH = 16;// <<outputChannel>>
 

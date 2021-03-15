@@ -58,6 +58,65 @@ int conv_2d(
     return 0;
 }
 
+int fused_conv_2d_relu(
+        const void *input_tensor,
+        void *output_tensor,
+        const void *weight_tensor,
+        const void *bias_tensor,
+        unsigned W,
+        unsigned H,
+        unsigned IN_CH,
+        unsigned OUT_CH,
+        unsigned kernel_size)
+{
+
+    def_type *in_ts = (def_type*)input_tensor;
+    def_type *out_ts = (def_type*)output_tensor;
+    def_type *w_ts = (def_type*)weight_tensor;
+    def_type *b_ts = (def_type*)bias_tensor;
+
+
+    unsigned w, h, in_ch;
+    unsigned m, n, out_ch;
+    unsigned OH, OW;
+
+    OH = H - kernel_size + 1;
+    OW = W - kernel_size + 1;
+
+    for (out_ch = 0; out_ch < OUT_CH; out_ch++)
+    {
+        for (h = 0; h < OH; h++)
+        {
+            for (w = 0; w < OW; w++)
+            {
+                def_type res = 0;
+                for (in_ch = 0; in_ch < IN_CH; in_ch++)
+                {
+                    for (m = 0; m < kernel_size; m++)
+                    {
+                        for (n =0; n < kernel_size; n++)
+                        {
+
+                            res += (*(in_ts + in_ch * H * W + (h + m) * W + (w + n))
+                                   *
+                                   *(w_ts
+                                     + in_ch * kernel_size * kernel_size * OUT_CH
+                                     + out_ch * kernel_size * kernel_size
+                                     + m * kernel_size + n));
+                        }
+                    }
+                }
+                res  += *(b_ts + out_ch);
+                if (res < (def_type)0)
+                    res = (def_type)0;
+                *(out_ts + out_ch * OW * OH + h * OW + w) = res;
+            }
+        }
+    }
+
+    return 0;
+}
+
 int maxpool_2d(const void *input_tensor,
                void *output_tensor,
                unsigned W,
