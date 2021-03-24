@@ -9,6 +9,7 @@ from collections import OrderedDict
 from VariableNameHelper import *
 
 import numpy as np
+from Commons import *
 
 class OperatorInterface(object):
     def __init__(self):
@@ -100,52 +101,16 @@ class MaxPool2DOperatorInterface(OperatorInterface):
         info += "Filter Size options  (w, h): " + str((self.option["filterW"], self.option["filterH"])) + "\n"
         return info
 
-class TensorInterface(object):
+class ModelHighLevelIR(ModelIR):
     def __init__(self):
-        self._name = str()
-        self.shape = list()
-        # Type 0 tensor means const
-        # type 1 tensor means var
-        # variable tensor's buffer is all 0 but shape infomation is valid
-        self.tensorType = -1
-        # The tensorSize is in pixel not bytes!
-        self.tensorSize = -1
-        self.tensor = None
+        super(ModelHighLevelIR, self).__init__()
 
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name: str):
-        self._name = VariableNameHelper.parse(name)
-
-    def __str__(self):
-        return "Tensor: " + self.name + \
-                ", Shape: " + str(self.shape) + \
-                ", Type: " + "variable" if self.tensorType else "constant" + \
-                ", Sizes: " + str(self.tensorSize) + "\n"
-
-class ModelIR(object):
-    def __init__(self):
-        self._ops = list() # List of OperatorInterface
-        self._tensors = list() # List of numpy array
-    
-    @property
-    def Operator(self):
-        return
-
-    @Operator.setter
-    def Operator(self, op: OperatorInterface):
-        self._ops.append(op)
-
-    @property
-    def Tensor(self):
-        return
-
-    @Tensor.setter
-    def Tensor(self, tensor: TensorInterface):
-        self._tensors.append(tensor)
+    def getLargestTensorSize(self) -> int:
+        largestTensorSize = -1
+        for i in range(len(self._tensors)):
+            if self._tensors[i] > largestTensorSize:
+                largestTensorSize = self._tensors[i]
+        return largestTensorSize
 
     def __str__(self):
         info = ""
@@ -162,10 +127,10 @@ class ModelIR(object):
         return info
 
 class ModelHelperTFLite(object):
-    def __init__(self, modelbuffer, IR: ModelIR):
+    def __init__(self, modelbuffer, IR = None):
         self.model = tflite.Model.Model.GetRootAsModel(modelbuffer, 0)
         self.subgraph = self.model.Subgraphs(0)
-        self.IR = IR
+        self.IR = ModelHighLevelIR() if IR is None else IR
         self._fillIR()
         
     def _fillIR(self):
@@ -247,7 +212,7 @@ class ModelHelperTFLite(object):
             self.IR.Operator = op
 
 if __name__ == "__main__":
-    modelIR = ModelIR()
+    modelIR = ModelHighLevelIR()
     buffer = file2Buffer("./bin/model.tflite")
     modelHelperTFLite = ModelHelperTFLite(buffer, modelIR)
     print(modelIR)
