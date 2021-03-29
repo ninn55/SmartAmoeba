@@ -9,8 +9,8 @@ ActivationFunctionTypeEnumDict = {
 ActivationFunctionTypeEnumDict = {value:key for key, value in ActivationFunctionTypeEnumDict.items()}
 
 PaddingEnumDict = {
-    "SAME" : 1,
-    "VALID" : 2
+    "SAME" : 0,
+    "VALID" : 1
 }
 PaddingEnumDict = {value:key for key, value in PaddingEnumDict.items()}
 

@@ -101,6 +101,10 @@ class MaxPool2DOperatorInterface(OperatorInterface):
         info += "Filter Size options  (w, h): " + str((self.option["filterW"], self.option["filterH"])) + "\n"
         return info
 
+#--------------------------------
+# ModelHighLevelIR
+# It's essentially a container for TensorInterface and OperatorInterface
+#--------------------------------
 class ModelHighLevelIR(ModelIR):
     def __init__(self):
         super(ModelHighLevelIR, self).__init__()
@@ -114,6 +118,10 @@ class ModelHighLevelIR(ModelIR):
 
     def __str__(self):
         info = ""
+#--------------------------------
+# Print out all infomation
+#--------------------------------
+        info += "\n\nGraph info:\n\n"
         for op in self._ops:
             info += "\n"
             info += str(op)
@@ -124,8 +132,18 @@ class ModelHighLevelIR(ModelIR):
             for i in op.outputTensors:
                 info += str(self._tensors[i])
             info += "\n"
+#--------------------------------
+# Print out all infomation
+#--------------------------------
+        info += "\n\nTensor info:\n\n"
+        for i in range(len(self._tensors)):
+            info += str(i) + "th Tensor: "
+            info += str(self._tensors[i])
         return info
-
+#--------------------------------
+# ModelHelperTFLite
+# The core job of this 
+#--------------------------------
 class ModelHelperTFLite(object):
     def __init__(self, modelbuffer, IR = None):
         self.model = tflite.Model.Model.GetRootAsModel(modelbuffer, 0)
@@ -145,6 +163,9 @@ class ModelHelperTFLite(object):
             tensor.tensorSize = 1
             for k in tensor.shape:
                 tensor.tensorSize *= k
+            # This condition is questionable, may change in future tensorflow version
+            # This assumes in the tensorflow lite buffer definition
+            # Specific tensor needs to be calculated at runtime is omitted in the buffer definition itself.
             if self.model.Buffers(self.subgraph.Tensors(i).Buffer()).DataLength() == 0:
                 tensor.tensor = np.zeros(tensor.shape)
                 tensor.tensorType = 1
@@ -152,6 +173,7 @@ class ModelHelperTFLite(object):
                 buffer = []
                 for j in range(self.model.Buffers(self.subgraph.Tensors(i).Buffer()).DataLength()):
                     buffer.append(self.model.Buffers(self.subgraph.Tensors(i).Buffer()).Data(j))
+                # Decode the tensor in IEEE-754 float32 format
                 tensor.tensor = np.frombuffer(bytearray(buffer), dtype='<f4').reshape(tensor.shape)
                 tensor.tensorType = 0
             self.IR.Tensor = tensor
@@ -159,8 +181,11 @@ class ModelHelperTFLite(object):
     def _fillOperators(self):
         for i in range(self.subgraph.OperatorsLength()):
             opcode = self.model.OperatorCodes(self.subgraph.Operators(i).OpcodeIndex()).BuiltinCode()
-            
-            if opcode == 3 and self.subgraph.Operators(i).BuiltinOptionsType() == BuiltinOptions.BuiltinOptions().Conv2DOptions:
+            if False:
+                # For appearance
+                pass
+            # Support for operation conv2d
+            elif opcode == 3 and self.subgraph.Operators(i).BuiltinOptionsType() == BuiltinOptions.BuiltinOptions().Conv2DOptions:
                 options = Conv2DOptions.Conv2DOptions()
                 options.Init(self.subgraph.Operators(i).BuiltinOptions().Bytes, self.subgraph.Operators(i).BuiltinOptions().Pos)
                 op = Conv2DOperatorInterface()
@@ -171,7 +196,7 @@ class ModelHelperTFLite(object):
                 op.option["dilationH"] = options.DilationHFactor()
                 op.option["fusedActivationCode"] = options.FusedActivationFunction()
                 op.option["paddingCode"] = options.Padding()
-
+            # Support for operation MaxPool2D
             elif opcode == 17 and self.subgraph.Operators(i).BuiltinOptionsType() == BuiltinOptions.BuiltinOptions().Pool2DOptions:
                 options = Pool2DOptions.Pool2DOptions()
                 options.Init(self.subgraph.Operators(i).BuiltinOptions().Bytes, self.subgraph.Operators(i).BuiltinOptions().Pos)
@@ -183,9 +208,10 @@ class ModelHelperTFLite(object):
                 op.option["filterH"] = options.FilterHeight()
                 op.option["fusedActivationCode"] = options.FusedActivationFunction()
                 op.option["paddingCode"] = options.Padding()
-
+            # Support for operation Reshape
             elif opcode == 22 and self.subgraph.Operators(i).BuiltinOptions() is None:
                 op = ReshapeOperatorInterface()
+            # Support for operation FullyConnected
             elif opcode == 9 and self.subgraph.Operators(i).BuiltinOptionsType() == BuiltinOptions.BuiltinOptions().FullyConnectedOptions:
                 options = FullyConnectedOptions.FullyConnectedOptions()
                 options.Init(self.subgraph.Operators(i).BuiltinOptions().Bytes, self.subgraph.Operators(i).BuiltinOptions().Pos)
@@ -195,6 +221,7 @@ class ModelHelperTFLite(object):
 
                 if options.WeightsFormat() != 0 or options.KeepNumDims() or options.AsymmetricQuantizeInputs():
                     raise RuntimeError("Operator not supported")
+            # Support for operation Softmax
             elif opcode == 25 and self.subgraph.Operators(i).BuiltinOptionsType() == BuiltinOptions.BuiltinOptions().SoftmaxOptions:
                 options = SoftmaxOptions.SoftmaxOptions()
                 options.Init(self.subgraph.Operators(8).BuiltinOptions().Bytes, self.subgraph.Operators(8).BuiltinOptions().Pos)
@@ -202,7 +229,7 @@ class ModelHelperTFLite(object):
 
                 op.option["beta"] = options.Beta()
             else:
-                op = OperatorInterface()
+                raise RuntimeError("Operation" + "" + "Not supported")
             
             op.opcode = opcode
             op.name = BuiltinOperatorEnumDict[self.model.OperatorCodes(self.subgraph.Operators(i).OpcodeIndex()).BuiltinCode()] + "_" + str(i)
@@ -213,7 +240,8 @@ class ModelHelperTFLite(object):
 
 if __name__ == "__main__":
     modelIR = ModelHighLevelIR()
-    buffer = file2Buffer("./bin/model.tflite")
+    buffer = file2Buffer("./bin/pretrainedResnet.tflite")
+    # buffer = file2Buffer("./bin/model.tflite")
     modelHelperTFLite = ModelHelperTFLite(buffer, modelIR)
     print(modelIR)
     
