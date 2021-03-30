@@ -70,4 +70,9 @@ int argmax(const void *,
            unsigned *,
            unsigned );
 
+int add(const void *,
+        const void *,
+        void *,
+        unsigned );
+
 #endif // _OPS_H

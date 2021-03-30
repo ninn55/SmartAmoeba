@@ -329,6 +329,7 @@ int flatten(const void *input_tensor,
             }
         }
     }
+    return 0;
 }
 
 int argmax(const void *input_tensor,
@@ -351,4 +352,24 @@ int argmax(const void *input_tensor,
         }
     }
     *output_index = pos;
+    return 0;
+}
+
+int add(const void *input_tensor_0,
+        const void *input_tensor_1,
+        void *output_index,
+        unsigned W)
+{
+    // UNTESTED !!!
+    def_type *in_ts_0 = (def_type*)input_tensor_0;
+    def_type *in_ts_1 = (def_type*)input_tensor_1;
+    def_type *out_ts = (def_type*)output_index;
+
+    memcpy(out_ts, in_ts_0, sizeof(*out_ts) * W);
+
+    for(int i = 0; i < W; ++i){
+        *(out_ts + i) += *(in_ts_1 + i);
+    }
+    
+    return 0;
 }
