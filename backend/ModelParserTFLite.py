@@ -1,15 +1,25 @@
 import tflite
 from tflite import Model
 from tflite import BuiltinOptions 
-from tflite import Conv2DOptions, Pool2DOptions, ReshapeOptions, FullyConnectedOptions, SoftmaxOptions
+from tflite import (Conv2DOptions, 
+                    Pool2DOptions, 
+                    ReshapeOptions, 
+                    FullyConnectedOptions, 
+                    SoftmaxOptions, 
+                    AddOptions,
+                    DepthwiseConv2DOptions)
 
 from FileHelper import file2Buffer
-from EnumDictionarys import *
+from EnumDictionarys import (ActivationFunctionTypeEnumDict,
+                            PaddingEnumDict,
+                            TensorTyperEnumDict,
+                            BuiltinOperatorEnumDict)
 from collections import OrderedDict
-from VariableNameHelper import *
+from VariableNameHelper import VariableNameHelper
 
 import numpy as np
-from Commons import *
+from Commons import (ModelIR, 
+                    TensorInterface)
 
 class OperatorInterface(object):
     def __init__(self):
@@ -28,6 +38,35 @@ class OperatorInterface(object):
 
     def __str__(self):
         return "Operation: " + self.name + "\n"
+
+class AddOperatorInterface(OperatorInterface):
+    def __init__(self):
+        super().__init__()
+        self.option = {"fusedActivationCode": -1}
+    
+    def __str__(self):
+        return "Operation: " + self.name + "\n" + \
+                "Fused activation functions " + ActivationFunctionTypeEnumDict[self.option["fusedActivationCode"]] + "\n"
+
+class DepthwiseConv2DOperatorInterface(OperatorInterface):
+    def __init__(self):
+        super().__init__()
+        self.option = {\
+            "strideW" : 0, "strideH" : 0, \
+            "dilationW" : 0, "dilationH" : 0, \
+            "fusedActivationCode" : -1, \
+            "paddingCode" : -1, \
+            "depthMultiplier" : "deprecated in tf 2.1 and above" \
+        }
+
+    def __str__(self):
+        info  = "Operation: " + self.name + "\n"
+        info += "Options for this Conv2D layer are :" + "\n"
+        info += "Fused activation functions " + ActivationFunctionTypeEnumDict[self.option["fusedActivationCode"]] + "\n"
+        info += "Padding options :" + PaddingEnumDict[self.option["paddingCode"]] + "\n"
+        info += "Stride options (w, h):  " + str((self.option["strideW"], self.option["strideH"])) + "\n"
+        info += "Dilation options  (w, h): " + str((self.option["dilationW"], self.option["dilationH"])) + "\n"
+        return info
 
 class SoftmaxOperatorInterface(OperatorInterface):
     def __init__(self):
@@ -101,6 +140,28 @@ class MaxPool2DOperatorInterface(OperatorInterface):
         info += "Filter Size options  (w, h): " + str((self.option["filterW"], self.option["filterH"])) + "\n"
         return info
 
+class AveragePool2DOperatorInterface(OperatorInterface):
+    """AveragePool2DOperatorInterface
+    From tensorflow lite flatbuffer buffer data to high level IR
+    """
+    def __init__(self):
+        super().__init__()
+        self.option = {\
+            "strideW" : 0, "strideH" : 0, \
+            "filterW" : 0, "filterH" : 0, \
+            "fusedActivationCode" : -1, \
+            "paddingCode" : -1 \
+        }
+
+    def __str__(self):
+        info  = "Operation: " + self.name + "\n"
+        info += "Options for this AveragePool2D layer are :" + "\n"
+        info += "Fused activation functions " + ActivationFunctionTypeEnumDict[self.option["fusedActivationCode"]] + "\n"
+        info += "Padding options :" + PaddingEnumDict[self.option["paddingCode"]] + "\n"
+        info += "Stride options (w, h):  " + str((self.option["strideW"], self.option["strideH"])) + "\n"
+        info += "Filter Size options  (w, h): " + str((self.option["filterW"], self.option["filterH"])) + "\n"
+        return info
+
 #--------------------------------
 # ModelHighLevelIR
 # It's essentially a container for TensorInterface and OperatorInterface
@@ -121,24 +182,26 @@ class ModelHighLevelIR(ModelIR):
 #--------------------------------
 # Print out all infomation
 #--------------------------------
-        info += "\n\nGraph info:\n\n"
-        for op in self._ops:
-            info += "\n"
-            info += str(op)
-            info += "\n Input: \n"
-            for i in op.inputTensors:
-                info += str(self._tensors[i])
-            info += "\n Output: \n"
-            for i in op.outputTensors:
-                info += str(self._tensors[i])
-            info += "\n"
+        if True:
+            info += "\n\nGraph info:\n\n"
+            for op in self._ops:
+                info += "\n"
+                info += str(op)
+                info += "\n Input: \n"
+                for i in op.inputTensors:
+                    info += str(self._tensors[i])
+                info += "\n Output: \n"
+                for i in op.outputTensors:
+                    info += str(self._tensors[i])
+                info += "\n"
 #--------------------------------
 # Print out all infomation
 #--------------------------------
-        info += "\n\nTensor info:\n\n"
-        for i in range(len(self._tensors)):
-            info += str(i) + "th Tensor: "
-            info += str(self._tensors[i])
+        if False:
+            info += "\n\nTensor info:\n\n"
+            for i in range(len(self._tensors)):
+                info += str(i) + "th Tensor: "
+                info += str(self._tensors[i])
         return info
 #--------------------------------
 # ModelHelperTFLite
@@ -174,7 +237,17 @@ class ModelHelperTFLite(object):
                 for j in range(self.model.Buffers(self.subgraph.Tensors(i).Buffer()).DataLength()):
                     buffer.append(self.model.Buffers(self.subgraph.Tensors(i).Buffer()).Data(j))
                 # Decode the tensor in IEEE-754 float32 format
-                tensor.tensor = np.frombuffer(bytearray(buffer), dtype='<f4').reshape(tensor.shape)
+                if self.subgraph.Tensors(i).Type() == 0:
+                    tensor.tensor = np.frombuffer(bytearray(buffer), dtype='<f4').reshape(tensor.shape)
+                    tensor.tensorTyperEnum = 0
+                elif self.subgraph.Tensors(i).Type() == 2:
+                    tensor.tensor = np.frombuffer(bytearray(buffer), dtype='<i4').reshape(tensor.shape)
+                    tensor.tensorTyperEnum = 2
+                elif self.subgraph.Tensors(i).Type() == 9:
+                    tensor.tensor = np.frombuffer(bytearray(buffer), dtype='<i1').reshape(tensor.shape)
+                    tensor.tensorTyperEnum = 9
+                else:
+                    raise RuntimeError("Not supported buffer format! Got type " + str(TensorTyperEnumDict[self.subgraph.Tensors(i).Type()]) + "!")
                 tensor.tensorType = 0
             self.IR.Tensor = tensor
             
@@ -224,12 +297,43 @@ class ModelHelperTFLite(object):
             # Support for operation Softmax
             elif opcode == 25 and self.subgraph.Operators(i).BuiltinOptionsType() == BuiltinOptions.BuiltinOptions().SoftmaxOptions:
                 options = SoftmaxOptions.SoftmaxOptions()
-                options.Init(self.subgraph.Operators(8).BuiltinOptions().Bytes, self.subgraph.Operators(8).BuiltinOptions().Pos)
+                options.Init(self.subgraph.Operators(i).BuiltinOptions().Bytes, self.subgraph.Operators(i).BuiltinOptions().Pos)
                 op = SoftmaxOperatorInterface()
 
                 op.option["beta"] = options.Beta()
+            # Support for operation add
+            elif opcode == 0 and self.subgraph.Operators(i).BuiltinOptionsType() == BuiltinOptions.BuiltinOptions().AddOptions:
+                options = AddOptions.AddOptions()
+                options.Init(self.subgraph.Operators(i).BuiltinOptions().Bytes, self.subgraph.Operators(i).BuiltinOptions().Pos)
+                op = AddOperatorInterface()
+
+                op.option["fusedActivationCode"] = options.FusedActivationFunction()
+            # Support for operation AveragePool2d
+            elif opcode == 1 and self.subgraph.Operators(i).BuiltinOptionsType() == BuiltinOptions.BuiltinOptions().Pool2DOptions:
+                options = Pool2DOptions.Pool2DOptions()
+                options.Init(self.subgraph.Operators(i).BuiltinOptions().Bytes, self.subgraph.Operators(i).BuiltinOptions().Pos)
+                op = AveragePool2DOperatorInterface()
+
+                op.option["strideW"] = options.StrideW()
+                op.option["strideH"] = options.StrideH()
+                op.option["filterW"] = options.FilterWidth()
+                op.option["filterH"] = options.FilterHeight()
+                op.option["fusedActivationCode"] = options.FusedActivationFunction()
+                op.option["paddingCode"] = options.Padding()
+            # Support for operation DEPTHWISE_CONV_2D
+            elif opcode == 4 and self.subgraph.Operators(i).BuiltinOptionsType() == BuiltinOptions.BuiltinOptions().DepthwiseConv2DOptions:
+                options = DepthwiseConv2DOptions.DepthwiseConv2DOptions()
+                options.Init(self.subgraph.Operators(i).BuiltinOptions().Bytes, self.subgraph.Operators(i).BuiltinOptions().Pos)
+                op = DepthwiseConv2DOperatorInterface()
+
+                op.option["strideW"] = options.StrideW()
+                op.option["strideH"] = options.StrideH()
+                op.option["dilationW"] = options.DilationWFactor()
+                op.option["dilationH"] = options.DilationHFactor()
+                op.option["fusedActivationCode"] = options.FusedActivationFunction()
+                op.option["paddingCode"] = options.Padding()
             else:
-                raise RuntimeError("Operation" + "" + "Not supported")
+                raise RuntimeError("Operation " + BuiltinOperatorEnumDict[opcode] + " Not supported")
             
             op.opcode = opcode
             op.name = BuiltinOperatorEnumDict[self.model.OperatorCodes(self.subgraph.Operators(i).OpcodeIndex()).BuiltinCode()] + "_" + str(i)
@@ -240,7 +344,9 @@ class ModelHelperTFLite(object):
 
 if __name__ == "__main__":
     modelIR = ModelHighLevelIR()
-    buffer = file2Buffer("./bin/pretrainedResnet.tflite")
+    # buffer = file2Buffer("./bin/tinymlperf/aww_ref_model.tflite")
+    buffer = file2Buffer("./bin/tinymlperf/vww_96_float.tflite")
+    # buffer = file2Buffer("./bin/tinymlperf/pretrainedResnet.tflite")
     # buffer = file2Buffer("./bin/model.tflite")
     modelHelperTFLite = ModelHelperTFLite(buffer, modelIR)
     print(modelIR)

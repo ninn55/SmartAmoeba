@@ -32,6 +32,8 @@ class TensorInterface(object):
         # type 1 tensor means var
         # variable tensor's buffer is all 0 but shape infomation is valid
         self.tensorType = -1
+        # Indexed into TensorTyperEnumDict
+        self.tensorTyperEnum = -1
         # The tensorSize is in pixel not bytes!
         self.tensorSize = -1
         self.tensor = None
