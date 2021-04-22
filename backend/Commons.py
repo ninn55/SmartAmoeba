@@ -1,7 +1,5 @@
 from VariableNameHelper import VariableNameHelper
-from matplotlib import pyplot as plt
 import numpy as np
-import networkx as nx 
 
 class ModelIR(object):
     """
@@ -66,6 +64,11 @@ class AdjacencyMatrix(object):
     First construct then __call__
     """
     def __init__(self, IR = None):
+        try:
+            import networkx as nx
+        except ImportError as e:
+            raise ImportError("requires networkx " "networkx.org") from e
+
         self.G = nx.DiGraph() 
         # Unified Represention of model
         self.IR = ModelIR() if IR is None else IR
@@ -105,12 +108,19 @@ class AdjacencyMatrix(object):
                 if self.AM[i][j] > 0: 
                     self.G.add_edge(i,j) 
 
-    def GenerateDot(self, name = "Common"):
-        nx.drawing.nx_agraph.write_dot(self.G, name + ".det")
+    def GenerateDot(self) -> str:
+        try:
+            import networkx as nx
+        except ImportError as e:
+            raise ImportError("requires networkx " "networkx.org") from e
+        return nx.nx_agraph.to_agraph(self.G).to_string()
 
-    def GenerateImage(self, name = "Common"):
-        nx.draw(self.G, with_labels=True, font_weight='bold')
-        plt.savefig(name + ".png")
+    def GenerateImage(self, name = "Common") -> bytes:
+        try:
+            import graphviz
+        except ImportError as e:
+            raise ImportError("requires graphviz " "graphviz.readthedocs.io") from e
+        return graphviz.Source(self.GenerateDot(), format='png').pipe()
 
     def __call__(self):
         return self.AM
@@ -126,5 +136,7 @@ if __name__ == "__main__":
     # buffer = file2Buffer("./bin/model.tflite")
     modelHelperTFLite = ModelHelperTFLite(buffer, modelIR)
     am = AdjacencyMatrix(modelIR)
-    am.GenerateImage()
-    am.GenerateDot()
+    with open("com.png", "wb") as f:
+        f.write(am.GenerateImage())
+    with open("com.dot", "w") as f:
+        f.write(am.GenerateDot())
