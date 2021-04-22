@@ -170,6 +170,26 @@ class ModelHighLevelIR(ModelIR):
     def __init__(self):
         super(ModelHighLevelIR, self).__init__()
 
+    def getTensorindexbyName(self, name: str) -> int:
+        for i in range(len(self._tensors)):
+            if self._tensors[i]._name == name:
+                return i
+        return -1
+
+    def findOpWithInputIndex(self, index: int) -> int:
+        ret = []
+        for i in range(len(self._ops)):
+            if index in self._ops[i].inputTensors:
+                ret.append(i)
+        return ret
+
+    def findOpWithOutputIndex(self, index: int) -> int:
+        ret = []
+        for i in range(len(self._ops)):
+            if index in self._ops[i].outputTensors:
+                ret.append(i)
+        return ret
+
     def getLargestTensorSize(self) -> int:
         largestTensorSize = -1
         for i in range(len(self._tensors)):
@@ -179,9 +199,7 @@ class ModelHighLevelIR(ModelIR):
 
     def __str__(self):
         info = ""
-#--------------------------------
-# Print out all infomation
-#--------------------------------
+        # Print out all infomation
         if True:
             info += "\n\nGraph info:\n\n"
             for op in self._ops:
@@ -194,15 +212,14 @@ class ModelHighLevelIR(ModelIR):
                 for i in op.outputTensors:
                     info += str(self._tensors[i])
                 info += "\n"
-#--------------------------------
-# Print out all infomation
-#--------------------------------
+        # Print out Tensor infomation
         if False:
             info += "\n\nTensor info:\n\n"
             for i in range(len(self._tensors)):
                 info += str(i) + "th Tensor: "
                 info += str(self._tensors[i])
         return info
+
 #--------------------------------
 # ModelHelperTFLite
 # The core job of this 
@@ -345,9 +362,9 @@ class ModelHelperTFLite(object):
 if __name__ == "__main__":
     modelIR = ModelHighLevelIR()
     # buffer = file2Buffer("./bin/tinymlperf/aww_ref_model.tflite")
-    buffer = file2Buffer("./bin/tinymlperf/vww_96_float.tflite")
+    # buffer = file2Buffer("./bin/tinymlperf/vww_96_float.tflite")
     # buffer = file2Buffer("./bin/tinymlperf/pretrainedResnet.tflite")
-    # buffer = file2Buffer("./bin/model.tflite")
+    buffer = file2Buffer("./bin/model.tflite")
     modelHelperTFLite = ModelHelperTFLite(buffer, modelIR)
     print(modelIR)
     

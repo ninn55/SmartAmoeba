@@ -1,8 +1,12 @@
 from VariableNameHelper import VariableNameHelper
+from matplotlib import pyplot as plt
+import numpy as np
+import networkx as nx 
 
 class ModelIR(object):
     """
     Store ops and tensors as list of object
+    Ingereted from tensorflow lite v3.0 schema
     """
     def __init__(self):
         self._ops = list() # List of OperatorInterface
@@ -25,6 +29,9 @@ class ModelIR(object):
         self._tensors.append(tensor)
 
 class TensorInterface(object):
+    """
+    A Base class to store 
+    """
     def __init__(self):
         self._name = str()
         self.shape = list()
@@ -51,3 +58,73 @@ class TensorInterface(object):
                 ", Shape: " + str(self.shape) + \
                 ", Type: " + ("variable" if self.tensorType else "constant") + \
                 ", Sizes: " + str(self.tensorSize) + "\n"
+
+class AdjacencyMatrix(object):
+    """
+    Transfer IR into a Adjacent Matrix
+    The AM is calculated during construct
+    First construct then __call__
+    """
+    def __init__(self, IR = None):
+        self.G = nx.DiGraph() 
+        # Unified Represention of model
+        self.IR = ModelIR() if IR is None else IR
+        # Tensor can be found in IR._tensors
+        # Ops can be found in IR._ops
+        # The index of this array is indexed into IR._ops which is a list of ops instances
+        # The value of this array element is indexed into IR._tensors which is a list of Tensor interface
+        #
+        # Known flaw assumes only one tensor passed from two ops
+        # a non-zero element Aij indicates an edge from i to j or
+        # A adjacent matrix annotation of the model IR
+        self.AM = np.zeros((len(self.IR._ops), ) * 2)
+        self._construct()
+        self._buildG()
+
+    def _construct(self):
+        for i in range(len(self.IR._ops)):
+            for j in self.IR._ops[i].inputTensors:
+                for k in self.IR.findOpWithOutputIndex(j):
+                    if self.AM[k][i] == 0 or self.AM[k][i] == j:
+                        self.AM[k][i] = j
+                    # self.AM[k][i] != j and self.AM[k][i] != 0
+                    else:
+                        raise RuntimeError("Not implemented")
+
+            for j in self.IR._ops[i].outputTensors:
+                for k in self.IR.findOpWithInputIndex(j):
+                    if self.AM[i][k] == 0 or self.AM[i][k] == j:
+                        self.AM[i][k] == j
+                    else:
+                        # self.AM[k][i] != j and self.AM[k][i] != 0
+                        raise RuntimeError("Not implemented")
+
+    def _buildG(self):
+        for i in range(self.AM.shape[0]): 
+            for j in range(self.AM.shape[1]): 
+                if self.AM[i][j] > 0: 
+                    self.G.add_edge(i,j) 
+
+    def GenerateDot(self, name = "Common"):
+        nx.drawing.nx_agraph.write_dot(self.G, name + ".det")
+
+    def GenerateImage(self, name = "Common"):
+        nx.draw(self.G, with_labels=True, font_weight='bold')
+        plt.savefig(name + ".png")
+
+    def __call__(self):
+        return self.AM
+
+if __name__ == "__main__":
+    from ModelParserTFLite import ModelHighLevelIR
+    from FileHelper import file2Buffer
+    from ModelParserTFLite import ModelHelperTFLite
+    modelIR = ModelHighLevelIR()
+    # buffer = file2Buffer("./bin/tinymlperf/aww_ref_model.tflite")
+    # buffer = file2Buffer("./bin/tinymlperf/vww_96_float.tflite")
+    buffer = file2Buffer("./bin/tinymlperf/pretrainedResnet.tflite")
+    # buffer = file2Buffer("./bin/model.tflite")
+    modelHelperTFLite = ModelHelperTFLite(buffer, modelIR)
+    am = AdjacencyMatrix(modelIR)
+    am.GenerateImage()
+    am.GenerateDot()
