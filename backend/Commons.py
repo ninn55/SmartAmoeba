@@ -103,10 +103,14 @@ class AdjacencyMatrix(object):
                         raise RuntimeError("Not implemented")
 
     def _buildG(self):
+        for i in range(self.AM.shape[0]):
+            self.G.add_node(i, shape = "record", fontname = "Arial",\
+                            label = self.IR._ops[i].name)
         for i in range(self.AM.shape[0]): 
             for j in range(self.AM.shape[1]): 
                 if self.AM[i][j] > 0: 
-                    self.G.add_edge(i,j) 
+                    self.G.add_edge(i,j)
+                    # self.G.add_edge(i,j, label = modelIR._tensors[int(self.AM[0][1])]._name)
 
     def GenerateDot(self) -> str:
         try:
@@ -136,7 +140,7 @@ if __name__ == "__main__":
     # buffer = file2Buffer("./bin/model.tflite")
     modelHelperTFLite = ModelHelperTFLite(buffer, modelIR)
     am = AdjacencyMatrix(modelIR)
-    with open("com.png", "wb") as f:
-        f.write(am.GenerateImage())
     with open("com.dot", "w") as f:
         f.write(am.GenerateDot())
+    with open("com.png", "wb") as f:
+        f.write(am.GenerateImage())

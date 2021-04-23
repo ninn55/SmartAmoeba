@@ -22,9 +22,14 @@ from Commons import (ModelIR,
                     TensorInterface)
 
 class OperatorInterface(object):
+    """
+    Base class for Operaters
+    """
     def __init__(self):
         self._name = str()
-        self.opcode = -1
+        # Opcode addopted from flatbuffer schema
+        self.opcode = -1 
+        # Input and Output tensors indexed into IR._tensors
         self.inputTensors = []
         self.outputTensors = []
     
@@ -37,9 +42,15 @@ class OperatorInterface(object):
         self._name = VariableNameHelper.parse(name)
 
     def __str__(self):
+        """
+        Default debug infomation
+        """
         return "Operation: " + self.name + "\n"
 
 class AddOperatorInterface(OperatorInterface):
+    """
+    Add 
+    """
     def __init__(self):
         super().__init__()
         self.option = {"fusedActivationCode": -1}
