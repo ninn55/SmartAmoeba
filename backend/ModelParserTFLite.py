@@ -187,6 +187,16 @@ class ModelHighLevelIR(ModelIR):
                 return i
         return -1
 
+    def findTensorFromOPtoOP(self, op_out: int, op_in: int):
+        # Find the Tensor between two ops
+        # op_in and op_out is index into IR._op
+        # return a list of tensor indexes match the requirements
+        # Return [] if there are no tensor match the requirements
+        without = self._ops[op_out].outputTensors
+        within = self._ops[op_in].inputTensors
+        # reference stackoverflow.com/questions/2864842
+        return list(set(without).intersection(within))
+
     def findOpWithInputIndex(self, index: int) -> int:
         ret = []
         for i in range(len(self._ops)):

@@ -1,5 +1,7 @@
 from VariableNameHelper import VariableNameHelper
+from collections import defaultdict
 import numpy as np
+MAX_STRING_LEN_GRAPH = 20
 
 class ModelIR(object):
     """
@@ -9,7 +11,9 @@ class ModelIR(object):
     def __init__(self):
         self._ops = list() # List of OperatorInterface
         self._tensors = list() # List of numpy array
-    
+        # List of indexes into _ops
+        # denote the computation order
+        self._order = list()
     @property
     def Operator(self):
         return self._ops
@@ -68,55 +72,87 @@ class AdjacencyMatrix(object):
             import networkx as nx
         except ImportError as e:
             raise ImportError("requires networkx " "networkx.org") from e
-
-        self.G = nx.DiGraph() 
+        
         # Unified Represention of model
         self.IR = ModelIR() if IR is None else IR
-        # Tensor can be found in IR._tensors
-        # Ops can be found in IR._ops
+
+        # Another graph representation
+        # As a dictionary, keys are int values are list of int
+        # both keys and values are indexed into IR._ops 
         # The index of this array is indexed into IR._ops which is a list of ops instances
-        # The value of this array element is indexed into IR._tensors which is a list of Tensor interface
         #
-        # Known flaw assumes only one tensor passed from two ops
-        # a non-zero element Aij indicates an edge from i to j or
+        # defaultdict can access all potential keys since type of dictionary value is set
         # A adjacent matrix annotation of the model IR
-        self.AM = np.zeros((len(self.IR._ops), ) * 2)
+        self.AM = defaultdict(list)
+        # Vertices count
+        self.VCount = len(self.IR._ops)
+        self.computeOrder = []
+        # Directed graph in networkx
+        self.G = nx.DiGraph()
+
         self._construct()
+        self._sort()
+        self.IR._order = self.computeOrder
         self._buildG()
 
     def _construct(self):
-        for i in range(len(self.IR._ops)):
-            for j in self.IR._ops[i].inputTensors:
-                for k in self.IR.findOpWithOutputIndex(j):
-                    if self.AM[k][i] == 0 or self.AM[k][i] == j:
-                        self.AM[k][i] = j
-                    # self.AM[k][i] != j and self.AM[k][i] != 0
-                    else:
-                        raise RuntimeError("Not implemented")
-
+        for i in range(self.VCount):
             for j in self.IR._ops[i].outputTensors:
                 for k in self.IR.findOpWithInputIndex(j):
-                    if self.AM[i][k] == 0 or self.AM[i][k] == j:
-                        self.AM[i][k] == j
-                    else:
-                        # self.AM[k][i] != j and self.AM[k][i] != 0
-                        raise RuntimeError("Not implemented")
+                    if k not in self.AM[j]:
+                        self.AM[i].append(k)
+
+    def _sort(self):
+        # DFS Topological Sorting for DAG
+        # Algorithm reference wikipedia.org/wiki/Topological_sorting#Depth-first_search
+        temporaryMark = defaultdict(bool)
+        permanentMark = defaultdict(bool)
+        L = []
+
+        def visit(self, i: int):
+            nonlocal temporaryMark, permanentMark, L
+            if permanentMark[i]:
+                return
+            if temporaryMark[i]:
+                raise RuntimeError("Not a DAG")
+            
+            temporaryMark[i] = True
+            for j in self.AM[i]:
+                visit(self, j)
+            temporaryMark[i] = False
+            permanentMark[i] = True
+            L.append(i)
+            return
+        
+        visit(self, 0)
+        self.computeOrder = L[::-1]
 
     def _buildG(self):
-        for i in range(self.AM.shape[0]):
+        for i in range(self.VCount):
             self.G.add_node(i, shape = "record", fontname = "Arial",\
-                            label = self.IR._ops[i].name)
-        for i in range(self.AM.shape[0]): 
-            for j in range(self.AM.shape[1]): 
-                if self.AM[i][j] > 0: 
-                    self.G.add_edge(i,j)
-                    # self.G.add_edge(i,j, label = modelIR._tensors[int(self.AM[0][1])]._name)
+                            label = "Op Name: %(name)s\\n\
+                                     Compute Order: %(order)s\
+                                    " \
+                                % {"name": self.IR._ops[i].name,
+                                    "order": self.computeOrder.index(i) + 1 
+                                },\
+                            xlabel = "Input Tensors: \\n%(inputs)s\\nOutput Tensors: \\n%(outputs)s\\n" % {
+                                "inputs": "\\n".join([j[:MAX_STRING_LEN_GRAPH] + " ... ..." if len(j) > MAX_STRING_LEN_GRAPH else j for j in [self.IR._tensors[j]._name for j in self.IR._ops[i].inputTensors]]),
+                                "outputs": "\\n".join([j[:MAX_STRING_LEN_GRAPH] + " ... ..." if len(j) > MAX_STRING_LEN_GRAPH else j for j in [self.IR._tensors[j]._name for j in self.IR._ops[i].outputTensors]])
+                            }
+                            )
+        
+        for i in self.AM.keys():
+            for j in self.AM[i]:
+                # Assume there are only one tensor between two operations
+                self.G.add_edge(i, j, label = " X ".join([str(k) for k in self.IR._tensors[self.IR.findTensorFromOPtoOP(i, j)[0]].shape]))
 
     def GenerateDot(self) -> str:
         try:
             import networkx as nx
         except ImportError as e:
             raise ImportError("requires networkx " "networkx.org") from e
+
         return nx.nx_agraph.to_agraph(self.G).to_string()
 
     def GenerateImage(self, name = "Common") -> bytes:
@@ -124,7 +160,8 @@ class AdjacencyMatrix(object):
             import graphviz
         except ImportError as e:
             raise ImportError("requires graphviz " "graphviz.readthedocs.io") from e
-        return graphviz.Source(self.GenerateDot(), format='png').pipe()
+        
+        return  graphviz.Source(self.GenerateDot(), format='png').pipe()
 
     def __call__(self):
         return self.AM
