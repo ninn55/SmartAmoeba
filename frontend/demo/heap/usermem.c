@@ -9,6 +9,16 @@
 static Heap_Control gUser_Malloc_Heap;
 Heap_Control  *RTEMS_Malloc_Heap = &gUser_Malloc_Heap;
 
+
+
+void heapwalk()
+{
+  _Heap_Walk(
+  RTEMS_Malloc_Heap,
+  1,
+  1);
+  
+}
 /*!
 \brief ��ʼ����ջ��
 \param heap_begin �ѵĳ�ʼ����ַ��

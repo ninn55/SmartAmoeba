@@ -14,6 +14,9 @@ class MemPlaner(object):
         self.alloc_index = 0
         self.debug = 1
 
+        self.mem_overhead = 16
+        self.mem_minsize = 32
+
     def __get_first_fit(self, memsize):
         index = 0
         for mem in self.mempool:
@@ -26,7 +29,9 @@ class MemPlaner(object):
 
 
     def alloc(self, memsize, align = 4):
-        memsize = int((memsize + align - 1.0) / align) * align
+        memsize = int((memsize + align - 1.0) / align) * align + self.mem_overhead
+        if memsize < self.mem_minsize:
+            memsize = self.mem_minsize
         self.alloc_index += 1
         index = self.__get_first_fit(memsize)
         alloc_mem = None
@@ -96,7 +101,7 @@ class MemPlaner(object):
         for mem in self.mempool:
             sum_size += mem[2]
 
-        return sum_size
+        return (sum_size + self.mem_overhead)
 
 
 

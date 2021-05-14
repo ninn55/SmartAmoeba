@@ -1,6 +1,6 @@
 #include "usermem.h"
 
-#define UAISS_PLAYGROUND_SIZE (52224 + 72)
+#define UAISS_PLAYGROUND_SIZE (52304)
 unsigned char uaiss_playground[UAISS_PLAYGROUND_SIZE];
 
 
@@ -32,6 +32,8 @@ int main(void)
     p1 = userMalloc(16384);
     ASSERT(p1 != NULL);
 
+    heapwalk();
+
     p3 = userMalloc(16384);
     ASSERT(p3 != NULL);
 
@@ -42,6 +44,7 @@ int main(void)
     ASSERT(p1 != NULL);
 
 
+    heapwalk();
 
 
 
