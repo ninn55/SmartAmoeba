@@ -12,7 +12,7 @@ class MemPlaner(object):
 
         self.mem_alloc_method = 0
         self.alloc_index = 0
-        self.debug = 0
+        self.debug = 1
 
     def __get_first_fit(self, memsize):
         index = 0
@@ -61,7 +61,7 @@ class MemPlaner(object):
             print('<end', alloc_mem)
 
 
-        return alloc_mem
+        return alloc_mem.copy()
 
     def free(self, ptr):
         for mem in self.mempool:
