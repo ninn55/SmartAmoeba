@@ -1,26 +1,39 @@
 #include "graph.h"
 #include "tensors.h"
 #include "ops.h"
-#include "string.h"
+#include "usermem.h"
 
-static const unsigned buffer_size = 2304;
-static const unsigned buffer_num = 2;
-static def_type buffer[2304 * 2];
-static unsigned buffer_pos = 0;
-// NO local variable is referenced
-#define GET_BUFFER_ADDR(addr) \
+#define UAISS_PLAYGROUND_SIZE (4 * 2304 * 2 + 128)
+unsigned char uaiss_playground[UAISS_PLAYGROUND_SIZE];
+
+#define ASSERT(a)   \
     do {\
-        addr = &buffer[buffer_pos * buffer_size];\
-        buffer_pos = (buffer_pos + 1) % buffer_num;\
-    } while(0)
+        if (!(a))\
+        {\
+            printf("ERROR:%d\n", __LINE__);\
+        }\
+    } while (0)
+
+//From libgcc/memcpy.c
+void *
+memcpy (void *dest, const void *src, size_t len)
+{
+  char *d = dest;
+  const char *s = src;
+  while (len--)
+    *d++ = *s++;
+  return dest;
+}
 
 //Only support 2d tensor input
 int calc_nn(def_type *input_tensor, def_type *output_tensor)
 {   
     // global initialization
-    def_type *out;
+    def_type *in_ts, *out;
+    userMallocInitialize(uaiss_playground, UAISS_PLAYGROUND_SIZE, 0);
+
+    // parameter init
     unsigned W, H, ICH;
-    def_type *in_ts = (def_type *)input_tensor;
 
     // Initiation for convelution 2D layer
     unsigned OCH, KS;
@@ -34,8 +47,8 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
     //-----------------------------------------
 
     // CONV_2D_0
-    GET_BUFFER_ADDR(out);
-
+    in_ts = (def_type *) input_tensor; //<<input_size>>
+    out = (def_type *) userMalloc(1 * 2 * 26 * 26 * sizeof(def_type));
     H = 28; // <<inputWidth>>
     W = 28; // <<inputHeight>>
     ICH = 1; // <<inputChannel>>
@@ -44,7 +57,7 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
     OCH = 2; // <<outputChannel>>
 
     fused_conv_2d_relu(in_ts, out, Conv2D1, Conv2D1_bias, W, H, ICH, OCH, KS);
-
+    printf("--------------->>\n\r");
 // Conv2D1_output
 #if 1 // added for debuging
     for (int i = 0; i < 2; i ++){
@@ -61,11 +74,15 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
             }
         }
     }
+    //tests for heap
+    ASSERT(in_ts != NULL);
+    ASSERT(out != NULL);
+    heapwalk();
 #endif
 
     //CONV_2D_1
     in_ts = out;
-    GET_BUFFER_ADDR(out);
+    out = (def_type *) userMalloc(1 * 4 * 24 * 24 * sizeof(def_type));
 
     W = 26; // <<inputWidth>>
     H = 26; // <<inputHeight>>
@@ -92,11 +109,15 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
             }
         }
     }
+    ASSERT(in_ts != NULL);
+    ASSERT(out != NULL);
+    heapwalk();
 #endif
 
     //MAX_POOL_2D_2
+    userFree(in_ts);
     in_ts = out;
-    GET_BUFFER_ADDR(out);
+    out = (def_type *) userMalloc(1 * 4 * 12 * 12 * sizeof(def_type));
 
     W = 24;
     H = 24;
@@ -120,10 +141,14 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
             }
         }
     }
+    ASSERT(in_ts != NULL);
+    ASSERT(out != NULL);
+    heapwalk();
 #endif
     //CONV_2D_3
+    userFree(in_ts);
     in_ts = out;
-    GET_BUFFER_ADDR(out);
+    out = (def_type *) userMalloc(1 * 8 * 10 * 10 * sizeof(def_type));
 
     W = 12; // <<inputWidth>>
     H = 12; // <<inputHeight>>
@@ -149,11 +174,15 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
             }
         }
     }
+    ASSERT(in_ts != NULL);
+    ASSERT(out != NULL);
+    heapwalk();
 #endif
 
     //CONV_2D_4
+    userFree(in_ts);
     in_ts = out;
-    GET_BUFFER_ADDR(out);
+    out = (def_type *) userMalloc(1 * 16 * 8 * 8 * sizeof(def_type));
 
     W = 10;// <<inputWidth>>
     H = 10;// <<inputHeight>>
@@ -179,11 +208,15 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
             }
         }
     }
+    ASSERT(in_ts != NULL);
+    ASSERT(out != NULL);
+    heapwalk();
 #endif
 
     //MAX_POOL_2D_5
+    userFree(in_ts);
     in_ts = out;
-    GET_BUFFER_ADDR(out);
+    out = (def_type *) userMalloc(1 * 16 * 4 * 4 * sizeof(def_type));
 
     W = 8;// <<inputWidth>>
     H = 8;// <<inputHeight>>
@@ -208,11 +241,15 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
             }
         }
     }
+    ASSERT(in_ts != NULL);
+    ASSERT(out != NULL);
+    heapwalk();
 #endif
 
     //RESHAPE_6
+    userFree(in_ts);
     in_ts = out;
-    GET_BUFFER_ADDR(out);
+    out = (def_type *) userMalloc(1 * 256 * sizeof(def_type));
 
     H = 4;// <<inputHeight>>
     W = 4;// <<inputWidth>>
@@ -228,11 +265,15 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
                     fabs(Flatten_output[0][i] - out[i]));
         }
     }
+    ASSERT(in_ts != NULL);
+    ASSERT(out != NULL);
+    heapwalk();
 #endif
 
     //FULLY_CONNECTED_7
+    userFree(in_ts);
     in_ts = out;
-    GET_BUFFER_ADDR(out);
+    out = (def_type *) userMalloc(1 * 10 * sizeof(def_type));
 
     W = 256;// <<inputWidth>>
     H = 1;// <<inputHeight>>
@@ -246,11 +287,15 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
             printf("|%f \t- %f \t| = %f \n \r", FullConnect_output[0][i], out[i], fabs(FullConnect_output[0][i] - out[i]));
         }
     }
+    ASSERT(in_ts != NULL);
+    ASSERT(out != NULL);
+    heapwalk();
 #endif
 
     // SOFTMAX_8
+    userFree(in_ts);
     in_ts = out;
-    GET_BUFFER_ADDR(out);
+    out = (def_type *) userMalloc(1 * 10 * sizeof(def_type));
     
     H = 1;// <<inputHeight>>
     W = 10;// <<inputWidth>>
@@ -263,6 +308,9 @@ int calc_nn(def_type *input_tensor, def_type *output_tensor)
             printf("|%f \t- %f \t| = %f \n \r", SoftMax_output[0][i], out[i], fabs(SoftMax_output[0][i] - out[i]));
         }
     }
+    ASSERT(in_ts != NULL);
+    ASSERT(out != NULL);
+    heapwalk();
 #endif
 
     //*output_tensor = *out;

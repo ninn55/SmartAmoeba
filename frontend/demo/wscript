@@ -1,0 +1,48 @@
+#encoding=utf-8
+
+top = '.'
+out = 'build'
+APPNAME = 'main'
+VERSION = '0.0.1'
+
+def options(opt):
+    pass
+
+def configure(ctx):   
+    ctx.load('gcc g++ gas')
+
+def build(ctx):
+    Optimize = '-O0'
+
+    c_files = ctx.path.ant_glob("*.c") + \
+            ctx.path.ant_glob("heap/**/*.c", excl = ["**/*_test.c"])
+
+    def_list = ["printk=printf", "vprintk=vprintf"]
+    inc_list = [top, top+'/heap/']
+
+    cxx_flags=['-std=gnu++14', '-fno-rtti', '-Wvla',  '-Wall', '-Wextra', 
+            '-Wno-unused-parameter', '-Wno-missing-field-initializers', '-Wno-unused-variable',
+            '-fmessage-length=0', '-fno-exceptions',
+            '-ffunction-sections', '-fno-use-cxa-atexit',
+            '-fdata-sections', '-funsigned-char',
+            '-fno-delete-null-pointer-checks', 
+            '-fomit-frame-pointer', Optimize, '-g', '-c']
+    c_flags=['-std=gnu11',
+            '-c', '-Wall', '-Wextra', '-Wno-unused-parameter', '-Wno-unused-variable',
+            '-Wno-missing-field-initializers', '-fmessage-length=0', 
+            '-fno-exceptions', '-ffunction-sections', 
+            '-fdata-sections', '-funsigned-char', 
+            '-fno-delete-null-pointer-checks', '-fomit-frame-pointer', Optimize, '-g']
+    c_flags += ["--std=c99"]
+    cxx_flags += ["--std=c++11"]
+    ld_flags = ["-lm"]
+    as_flags = ['-std=gnu11']
+    ctx.program(
+        source = c_files,\
+        target = APPNAME,\
+        defines = def_list,\
+        includes = inc_list,\
+        cxxflags = cxx_flags,\
+        cflags = c_flags,\
+        asflags = as_flags,\
+        ldflags = ld_flags)
