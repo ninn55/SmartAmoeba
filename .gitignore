@@ -199,7 +199,9 @@ try
 pcl_work
 conda
 conda_Linux
-.vscode/settings.json
+.vscode
+doc
+.lock-waf_linux_build
 *.pptx
 *.pdf
 *.
