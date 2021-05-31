@@ -1,7 +1,7 @@
-import tflite
-from tflite import Model
-from tflite import BuiltinOptions 
-from tflite import (Conv2DOptions, 
+import interface.tflite as tflite
+from interface.tflite import Model
+from interface.tflite import BuiltinOptions 
+from interface.tflite import (Conv2DOptions, 
                     Pool2DOptions, 
                     ReshapeOptions, 
                     FullyConnectedOptions, 
