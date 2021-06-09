@@ -1,12 +1,18 @@
-combination of two or multiple word
+Why use this name:
 
-Micro
-u
-C
-Tiny
-AI
-ML
-Controller
-Tensor
-Matrix
-Lite
+Name: Smart Amoeba (SA)
+
+Wiki: Amoeba is a type of cell or unicellular organism which has the ability to alter its shape.
+
+Meaning: 
+* Ancient: 
+* Flexible: 
+* Vary in size: 
+
+Stands for:
+
+Smart
+Autonomous
+Micro Optimized
+infErence
+BAckend
