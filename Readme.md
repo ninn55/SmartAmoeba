@@ -171,7 +171,7 @@ You can check out the published result from MLCommons. The paper and press cover
 **Disclaimer**: The reference submission is developed by MLCommons. The RISC-V result is presented by us. But this result is still under embargo by MLCommons. The result presented here is only meant to be a early show-off, and for internal use only. All parties involved **DONOT** ensure the correctness of this results.
 
 |  Submitter | Device  | Processor| Manufacturer & nodes | Software  | Latency VWW  | Latency IC  | Latency KWS  | Latency AD  |
-|---|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|
 | Harvard(Reference)  | Nucleo-L4R5ZI  |Arm Cortex-M4 w/ FPU   | TSMC 180nm  | Tensorflow Lite for Microcontrollers  |  603.14 |  704.23 | 181.92  |  10.40 |
 |  Peng Cheng Laboratory |  PCL Scepu02 | RV32IMAC with FPU(1)  | SMIC 55nm  |  TensorFlowLite for Microcontrollers 2.3.1 (modified) | 846.74  |  1239.16 | 325.63  |  13.65 |
 
