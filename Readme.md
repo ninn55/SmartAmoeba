@@ -6,7 +6,7 @@ A tinyML inference stack.
 
 This document also contain a general introduction and overview of tinyML.
 
-The name is explained [here](doc\nameIDEA.md).
+The name is explained [here](doc/nameIDEA.md).
 
 <!-- Written in 3 am midnight. Please don't be harsh alright? -->
 <!-- TODO @ninn55 Check for spelling error and grammar error! -->
@@ -26,7 +26,7 @@ Moving AI (artificial intelligence) to embedded application can post certain cha
 
 * Lack of portability: Software stack for commercial use is always business logic oriented. Portability is sacrificed for speed and space.
 
-![CMTvs](bin\res\CMT.png)
+![CMTvs](bin/res/CMT.png)
 
 AI as a broad term means machine showing human intelligence. Recently, the most straight forward way is through neural network. But the NN itself is usually unexplainable and needed to be trained or verified on a large dataset. Designing an algorithm for embedded hardware can be especially challenging:
 
@@ -35,7 +35,7 @@ AI as a broad term means machine showing human intelligence. Recently, the most 
 * Lack of mature model architecture: There is no widely accepted model architecture for embedded devices. Most mature NN archetecture is designed for cloud computing and can need up to 25 G-FLOPS per inference. As show in figure below, image cropped from MLPerf:tm:.
 * Lack of efficient and portable model format: Currently the most used model format for TinyML is ONNX and tflite. But either of them is designed specifically for embedded device. ONNX is designed to be a common format between training framework. TfLite is designed to be run on mobile devices. ONNX is complex and hard to cover all operations in implementation. Decoding tflite model needs significant computing power.
 
-![mlperf](bin\res\mlp.png)
+![mlperf](bin/res/mlp.png)
 
 The definition of TinyML given by tinyML organization is
 
@@ -103,19 +103,19 @@ During our design process, we considered some essential questions and how to sol
 
 With solving thees issues in mind, we made the top level design for SA. SA took model files in tflite format. Then parse and compile into a IR(intermediate representation). Then going through two layers of optimization, algorithm optimization which is hardware independent and hardware-specific optimization. The final target is a compute graph generated entirely in C, and compatible with C99 standard.
 
-![SA](bin\res\SA.png)
+![SA](bin/res/SA.png)
 
 To minimized the destabilizing effect of fragmented memory heap space, system provides a First-Fit algorithm. During compile time, a emulated process is employed to determine needed memory size. Then allocate the "playground" with a statically allocated array, since for portability we assume dynamic allocation is not supported. During runtime, SA uses First-Fit to automatically allocate space in the "playground". Although First-Fit can produce memory fragment, but after a inference loop all fragment is recalled.
 
 SA is separated into two part frontend and backend. The frontend is mostly written in Python3. Frontend contains model interface, currently only support tflite model in flatbuffer format, since TFLM is right now the de facto of tinyML inference framework. As an interface to training framework, we uses `flatc` to compile the schema file provided by TensorFlow Lite into python interface to parse the model. As long as the model is in tflite format, it can be trained with TensorFlow or Keras and only uses supported operations, SA can parse the model. The below graph is a visualized class diagram for tflite model in flatbuffer format.
 
-![tflite](bin\res\tflite.png)
+![tflite](bin/res/tflite.png)
 
 The Frontend also include a dummy First-Fit runner to determine the heap size. there are two kinds of classes in the Front end, converter and IR. IR uses information present in its own layer to generate some outside representation, such as C file as graph or a dot graph for visualization. Each IR only serve one purpose, such as compute the topology order for DAG(Directed Acyclic Graph)  or generate the dot graph. There is one IR is unified and has the most information, All other IR is converted from this unified IR with a specific Converter. Some Converter is integrated into the class constructor for simplicity. Converter as name said take information from one source IR and populate information to another destination IR. 
 
 Below graph is a simplified dot graph for Resnet-10. The model is the image classification model for MLPerf:tm: Tiny closed division.
 
-![resnet](bin\res\resnet.png)
+![resnet](bin/res/resnet.png)
 
 The backend is the actual implementation of operators and heap algorithm. The standard document for  operator and graph interface and heap allocation will be added soon.
 
@@ -127,7 +127,7 @@ Here, we present 2 benchmark result. One is a image classification task, and dir
 
 We designed a simple network with all essential operations, including 2D convelution, 2D Max pooling, ReLu activation, Full Connect and softmax. The full network can be seen in the below graph.
 
-![mnist](bin\res\mnst.png)
+![mnist](bin/res/mnst.png)
 
 The network input is a 28x28 image from MNIST and the output is a one-hot encoded vector. On a RISC-V MCU implementing RV32 IMACF, compiled with GCC 8.3.0, optimization level 2 and running at 300MHz, the direct comparison of space and speed between TFLM and SA can be seen in table below.
 
@@ -160,7 +160,7 @@ There are four test cases in the test suit, covering most well established use c
 
 On the test suit side, a closed sourced benchmark runner is running on the host machine to generate a comparable and fare result for every submitter. The runner communicate with host machine with UART using a text based protocol then measure inference latency with device's internal timer. 
 
-![MLPerf Tiny](bin\res\tinyperf.png)
+![MLPerf Tiny](bin/res/tinyperf.png)
 
 Our team developed firmware for all 4 test case to make a more thorough comparison. We modified TensorFlow Lite Micro 2.3.1 and compiled on RISC-V GCC 10.2.0. All code/result for our system will be open source on GitHub after publication.
 
