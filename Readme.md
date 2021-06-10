@@ -6,8 +6,11 @@ A tinyML inference stack.
 
 This document also contain a general introduction and overview of tinyML.
 
-<!-- IMPORTANT Written in 3 am midnight. Don't be harsh alright? -->
+The name is explained [here](doc\nameIDEA.md).
+
+<!-- Written in 3 am midnight. Please don't be harsh alright? -->
 <!-- TODO @ninn55 Check for spelling error and grammar error! -->
+<!-- TODO @ninn55 Check for Cpa inconsistency! -->
 
 ## Introduction
 
@@ -15,7 +18,7 @@ Moving AI (artificial intelligence) to embedded application can post certain cha
 
 <!-- TODO @BaconXu Changed mandarin content please verify-->
 
-* Limited computing resources: AI/ML algorithm usually takes more computation. Running a programs needs CPU(Central Computing Unit) time and RAM(Randomly Accessed Memory). In terms, they are determined by limited power. This will cause significant challenges, when porting AI algorithm to edge.
+* Limited computing resources: AI/ML algorithm usually takes more computation. Running a programs needs CPU(Central Computing Unit) time and RAM(Randomly Accessed Memory). In terms, they are determined by limited power. This will cause significant challenges, when porting AI algorithm to edge. As shown in table below, with Cloud Mobile and Tiny compared, the computing power difference can be clearly seen.
 
 * Fragmented ecosystem: The capacity of memory can range from KiloBytes to MegaBytes, from SRAM to SDRAM to DRAM. The Coremark:tm: score ranging from couple dozen to thousands. SIMD and float point operation is also limited to specific hardware platform. HAL(hardware abstraction layer) can also be different to fit application scenarios.
 
@@ -23,12 +26,16 @@ Moving AI (artificial intelligence) to embedded application can post certain cha
 
 * Lack of portability: Software stack for commercial use is always business logic oriented. Portability is sacrificed for speed and space.
 
+![CMTvs](bin\res\CMT.png)
+
 AI as a broad term means machine showing human intelligence. Recently, the most straight forward way is through neural network. But the NN itself is usually unexplainable and needed to be trained or verified on a large dataset. Designing an algorithm for embedded hardware can be especially challenging:
 
 * Lack of mature use cases: Academically and commercially speaking most advances in deep learning is for cloud for mobile platform.
 * Lack of open dataset: Most open source dataset as of 2021 is designed for cloud uses.
-* Lack of mature model architecture: There is no widely accepted model architecture for embedded devices.
+* Lack of mature model architecture: There is no widely accepted model architecture for embedded devices. Most mature NN archetecture is designed for cloud computing and can need up to 25 G-FLOPS per inference. As show in figure below, image cropped from MLPerf:tm:.
 * Lack of efficient and portable model format: Currently the most used model format for TinyML is ONNX and tflite. But either of them is designed specifically for embedded device. ONNX is designed to be a common format between training framework. TfLite is designed to be run on mobile devices. ONNX is complex and hard to cover all operations in implementation. Decoding tflite model needs significant computing power.
+
+![mlperf](bin\res\mlp.png)
 
 The definition of TinyML given by tinyML organization is
 
@@ -52,27 +59,86 @@ Designing a TinyML application will face challenge from all front. On one hand, 
 
 * When optimizing framework for 
 
+With all that said, the maturity of TinyML can bring certain benefit to commercial industrial and consumer product alike. Including
+
+* More User Privacy: Most end point user cares about privacy more and more and donot want to share personal data with third party cloud solution provider. By processing sensory data locally on edge, customer perceived value can be greatly improved.
+
+* Less Cost on Cloud Computing: When performing on cloud, with the growth of edge node count, companies can easily burn tens of thousands of dollars. By performing inference on edge near sensor, the unreliability and high cost for PaaS or IaaS platform can be reduced.
+
+* More Reliability: Christmas Eve of 2012, AWS failure caused Netflix downtime. End of 2020, google cloud failure caused some essential google service down. Cloud computing is not as reliable as it claims. By performing inference on edge, you can easily maintain the edge node and reduce down time.
+
+* Less Latency: By directly analyse censer data on edge, with enough optimized hardware software and algorithm, latency can be reduced, further improve customer perceived value.
+
 ### TinyML Inference Solution
 
 #### Tensorflow Lite Micro
 
+<!-- TODO @BaconXu @ninn55 add later-->
+TBD
+
 #### MicroTVM
 
 <!-- TODO @BaconXu @ninn55 add later-->
+TBD
 
 #### GLOW
 
 <!-- TODO @BaconXu @ninn55 add later-->
+TBD
 
 #### Tengine
 
 <!-- TODO @BaconXu @ninn55 add later-->
+TBD
 
 ## Our Solution
 
+During our design process, we considered some essential questions and how to solve them:
+
+* Provide a portable and flexible platform that can be easily ported and automatically deployed.
+* Minimize dependance on peripherals and hardware requirements.
+* Make it easy for hardware developers to optimize the operation bottle neck.
+* Support for wide rage of AI ecosystem, including support for operations and model format with training framework, make it easy to deploy and materialize.
+* Support for popular quantization scheme and network compression methods. Bring minimum accuracy deduction. Lower Operation count per inference and reduce latency.
+
+With solving thees issues in mind, we made the top level design for SA. SA took model files in tflite format. Then parse and compile into a IR(intermediate representation). Then going through two layers of optimization, algorithm optimization which is hardware independent and hardware-specific optimization. The final target is a compute graph generated entirely in C, and compatible with C99 standard.
+
+![SA](bin\res\SA.png)
+
+To minimized the destabilizing effect of fragmented memory heap space, system provides a First-Fit algorithm. During compile time, a emulated process is employed to determine needed memory size. Then allocate the "playground" with a statically allocated array, since for portability we assume dynamic allocation is not supported. During runtime, SA uses First-Fit to automatically allocate space in the "playground". Although First-Fit can produce memory fragment, but after a inference loop all fragment is recalled.
+
+SA is separated into two part frontend and backend. The frontend is mostly written in Python3. Frontend contains model interface, currently only support tflite model in flatbuffer format, since TFLM is right now the de facto of tinyML inference framework. As an interface to training framework, we uses `flatc` to compile the schema file provided by TensorFlow Lite into python interface to parse the model. As long as the model is in tflite format, it can be trained with TensorFlow or Keras and only uses supported operations, SA can parse the model. The below graph is a visualized class diagram for tflite model in flatbuffer format.
+
+![tflite](bin\res\tflite.png)
+
+The Frontend also include a dummy First-Fit runner to determine the heap size. there are two kinds of classes in the Front end, converter and IR. IR uses information present in its own layer to generate some outside representation, such as C file as graph or a dot graph for visualization. Each IR only serve one purpose, such as compute the topology order for DAG(Directed Acyclic Graph)  or generate the dot graph. There is one IR is unified and has the most information, All other IR is converted from this unified IR with a specific Converter. Some Converter is integrated into the class constructor for simplicity. Converter as name said take information from one source IR and populate information to another destination IR. 
+
+Below graph is a simplified dot graph for Resnet-10. The model is the image classification model for MLPerf:tm: Tiny closed division.
+
+![resnet](bin\res\resnet.png)
+
+The backend is the actual implementation of operators and heap algorithm. The standard document for  operator and graph interface and heap allocation will be added soon.
+
 ## Benchmark Result
 
+Here, we present 2 benchmark result. One is a image classification task, and direct comparison of the same neural network between TFLM(TensorFlow Lite Micro) and SA. The other is a full fledged benchmark suit.
+
 ### Latency Comparison
+
+We designed a simple network with all essential operations, including 2D convelution, 2D Max pooling, ReLu activation, Full Connect and softmax. The full network can be seen in the below graph.
+
+![mnist](bin\res\mnst.png)
+
+The network input is a 28x28 image from MNIST and the output is a one-hot encoded vector. On a RISC-V MCU implementing RV32 IMACF, compiled with GCC 8.3.0, optimization level 2 and running at 300MHz, the direct comparison of space and speed between TFLM and SA can be seen in table below.
+
+|   | Data Size in KB | Code Size in KB | Latency in mS  |
+|---|---|---|---|
+| TFLM  | 130.3  |  296.3 | 14.6  |
+| SA  | 19.1  | 20.1  |  7.0 |
+
+Compared to TFLM, RAM usage is reduced by 93.2%. ROM usage is reduced by 86.2%. Latency is reduced by 52.1%.
+
+On the same hardware, same compiler option, same network architecture, by simply changing from TFLM to SA, can reduce space and increase speed. On the same hardware, by using SA instead of TFLM, a more powerful network can be implemented, would otherwise running out of memory or bring too long of an elapse time.
 
 ### MLPerf:tm: Tiny Inference
 
@@ -113,7 +179,13 @@ Latency data in the above table is in ms.
 
 ## Roadmap and Future
 
+As the name states, SA is in prototyping stage. Future roadmap needs to be charted.
 
+* Support for Quantization, and model compression.
+* More Operation support
+* Support for PIC and runtime allocation, to allow dynamically import model graph
+* Support for FPGA
+* Support for more optimized heap allocation algorithm and memory plan to lower space consumption
 
 ## Developers
 
@@ -140,7 +212,3 @@ Initially, This project is developed with support from Peng Cheng Laboratory and
 * https://www.tinyml.org/
 * https://arxiv.org/pdf/2010.08678.pdf
 * https://arxiv.org/pdf/2003.04821.pdf
-* 
-
-
-

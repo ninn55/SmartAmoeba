@@ -1,18 +1,19 @@
-Why use this name:
+# Smart Amoeba (SA)
 
-Name: Smart Amoeba (SA)
+## Why we choose this name:
 
 Wiki: Amoeba is a type of cell or unicellular organism which has the ability to alter its shape.
 
 Meaning: 
-* Ancient: 
-* Flexible: 
-* Vary in size: 
+* Ancient: Amoeba is an ancient single cell organism. Meaning two things. One is this project is in a primitive state. The other is this project is one of the earliest iteration of this concept.
+* Flexible: Amoeba can show significate flexibility. Meaning this project have a certain elasticity, and can be use in mobile/tiny/fpga field in the future.
+* Deadly: When infected during swim session, fatality rate of Amoeba can be almost 100%. Meaning, if this project is continuing developed and done right, it can literally kill almost all competitors.
 
-Stands for:
+## Stands for:
 
-Smart
-Autonomous
-Micro Optimized
-infErence
-BAckend
+**Smart**
+**A**utonomous
+**M**icro 
+**O**ptimized
+inf**E**rence
+**BA**ckend
