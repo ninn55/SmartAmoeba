@@ -16,7 +16,7 @@ The name is explained [here](doc/nameIDEA.md).
 
 Moving AI (artificial intelligence) to embedded application can post certain challenges. Compared to cloud and mobile computing, the ecosystem for embedded hardware can be fragmented. System can vary from software to hardware stack, from build system to compiler, from ISA to peripherals. Embedded device at its core, is a highly customized computer system aiming at wide range of applications, which caused the highly customized software and hardware design. OS(Operating system) ranging from bare-metal to RTOS(Real time operating system), to micro-kernel, to Linux, is developed to fit onto different hardware. Power consumption can vary from micro-watts to hundreds of watts to accommodate from sensory analysis to self-driving cars and drones. A typical embedded system has certain traits:
 
-<!-- TODO @BaconXu Changed mandarin content please verify-->
+<!-- TODO @BaconXu Changed mandarin content please verify,,,,It's OKay@Bacon-->
 
 * Limited computing resources: AI/ML algorithm usually takes more computation. Running a programs needs CPU(Central Computing Unit) time and RAM(Randomly Accessed Memory). In terms, they are determined by limited power. This will cause significant challenges, when porting AI algorithm to edge. As shown in table below, with Cloud Mobile and Tiny compared, the computing power difference can be clearly seen.
 
