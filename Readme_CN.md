@@ -176,6 +176,8 @@ MLPerf:tm: Tiny 由 MLCommons 在社区成员的帮助下开发和发布。
 |---|---|---|
 |Email| xuxs@pcl.ac.cn  |  wniu@connect.ust.hk |
 |Github| https://github.com/coolbacon  |  https://github.com/ninn55 |
+
+
 我想贡献或有任何建议，请通过电子邮件与我们联系。
 
 ## 致谢
@@ -186,6 +188,6 @@ MLPerf:tm: Tiny 由 MLCommons 在社区成员的帮助下开发和发布。
 | [![pcl](http://www.szpclab.com/webimages/logo.png)](http://www.szpclab.com/)  | [![jideos](http://jideos.com/images/nav_logo.png)](http://jideos.com/)  |
 
 ## 参考
-https://www.tinyml.org/
-https://arxiv.org/pdf/2010.08678.pdf
-https://arxiv.org/pdf/2003.04821.pdf
+* https://www.tinyml.org/
+* https://arxiv.org/pdf/2010.08678.pdf
+* https://arxiv.org/pdf/2003.04821.pdf
